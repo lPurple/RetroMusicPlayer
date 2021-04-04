@@ -1,40 +1,65 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.mvp.presenter
 
+import code.name.monkey.retromusic.Result.Error
+import code.name.monkey.retromusic.Result.Success
+import code.name.monkey.retromusic.mvp.BaseView
 import code.name.monkey.retromusic.mvp.Presenter
-import code.name.monkey.retromusic.mvp.contract.SearchContract
-import java.util.*
-import java.util.concurrent.TimeUnit
+import code.name.monkey.retromusic.mvp.PresenterImpl
+import code.name.monkey.retromusic.providers.interfaces.Repository
+import kotlinx.coroutines.*
+import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Created by hemanths on 20/08/17.
  */
 
-class SearchPresenter(private val view: SearchContract.SearchView) : Presenter(), SearchContract.SearchPresenter {
+interface SearchView : BaseView {
 
-    override fun subscribe() {
-        search("")
-    }
+    fun showData(data: MutableList<Any>)
+}
 
-    override fun unsubscribe() {
-        disposable.clear()
-    }
+interface SearchPresenter : Presenter<SearchView> {
 
-    private fun showList(albums: ArrayList<Any>) {
-        if (albums.isEmpty()) {
-            view.showEmptyView()
-        } else {
-            view.showData(albums)
+    fun search(query: String?)
+
+    class SearchPresenterImpl @Inject constructor(
+        private val repository: Repository
+    ) : PresenterImpl<SearchView>(), SearchPresenter, CoroutineScope {
+
+        override val coroutineContext: CoroutineContext
+            get() = Dispatchers.IO + job
+
+        private var job: Job = Job()
+
+        override fun detachView() {
+            super.detachView()
+            job.cancel()
+        }
+
+        override fun search(query: String?) {
+            launch {
+                when (val result = repository.search(query)) {
+                    is Success -> withContext(Dispatchers.Main) { view?.showData(result.data) }
+                    is Error -> withContext(Dispatchers.Main) { view?.showEmptyView() }
+                }
+            }
         }
     }
-
-    override fun search(query: String?) {
-        disposable.add(repository.search(query)
-                .debounce(500, TimeUnit.MILLISECONDS)
-                .subscribeOn(schedulerProvider.computation())
-                .observeOn(schedulerProvider.ui())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ this.showList(it) },
-                        { view.showEmptyView() },
-                        { view.completed() }))
-    }
 }
+
+

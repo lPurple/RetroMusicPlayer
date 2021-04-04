@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.coordinatorlayout.widget.CoordinatorLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -8,72 +8,69 @@
     android:focusable="true">
 
     <View
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/colorSurface" />
+
+    <View
         android:id="@+id/colorGradientBackground"
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
-    <com.jetradarmobile.snowfall.SnowfallView
-        android:id="@+id/snowfall"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent" />
 
     <include layout="@layout/shadow_statusbar_toolbar" />
 
-    <code.name.monkey.retromusic.views.FitSystemWindowsLayout
-        android:id="@+id/safeArea"
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:orientation="vertical">
 
-        <LinearLayout
+        <FrameLayout
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
+            android:layout_height="wrap_content">
 
-            <FrameLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+            <include layout="@layout/status_bar" />
+        </FrameLayout>
 
-                <include layout="@layout/status_bar" />
-            </FrameLayout>
 
-            <code.name.monkey.retromusic.views.WidthFitSquareLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content">
+        <code.name.monkey.retromusic.views.WidthFitSquareLayout
+            android:id="@+id/playerAlbumCoverContainer"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0">
 
-                <fragment
-                    android:id="@+id/playerAlbumCoverFragment"
-                    android:name="code.name.monkey.retromusic.ui.fragments.player.PlayerAlbumCoverFragment"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    tools:layout="@layout/fragment_album_cover" />
-            </code.name.monkey.retromusic.views.WidthFitSquareLayout>
-
-            <FrameLayout
+            <fragment
+                android:id="@+id/playerAlbumCoverFragment"
+                android:name="code.name.monkey.retromusic.fragments.player.PlayerAlbumCoverFragment"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
-                android:layout_weight="1">
+                tools:layout="@layout/fragment_album_cover" />
+        </code.name.monkey.retromusic.views.WidthFitSquareLayout>
 
-                <fragment
-                    android:id="@+id/playbackControlsFragment"
-                    android:name="code.name.monkey.retromusic.ui.fragments.player.normal.PlayerPlaybackControlsFragment"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    tools:layout="@layout/fragment_player_playback_controls" />
-            </FrameLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="1">
 
-            <FrameLayout
-
+            <fragment
+                android:id="@+id/playbackControlsFragment"
+                android:name="code.name.monkey.retromusic.fragments.player.normal.PlayerPlaybackControlsFragment"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_weight="0">
+                android:layout_height="match_parent"
+                tools:layout="@layout/fragment_player_playback_controls" />
+        </FrameLayout>
 
-                <androidx.appcompat.widget.Toolbar
-                    android:id="@+id/playerToolbar"
-                    style="@style/Toolbar"
-                    android:layout_gravity="bottom"
-                    android:navigationIcon="@drawable/ic_close_white_24dp"
-                    app:navigationIcon="@drawable/ic_close_white_24dp" />
-            </FrameLayout>
-        </LinearLayout>
-    </code.name.monkey.retromusic.views.FitSystemWindowsLayout>
-</androidx.coordinatorlayout.widget.CoordinatorLayout>
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_weight="0">
+
+            <com.google.android.material.appbar.MaterialToolbar
+                android:id="@+id/playerToolbar"
+                style="@style/Toolbar"
+                android:layout_gravity="bottom"
+                android:navigationIcon="@drawable/ic_keyboard_arrow_down_black_24dp"
+                app:navigationIcon="@drawable/ic_keyboard_arrow_down_black_24dp" />
+        </FrameLayout>
+    </LinearLayout>
+</FrameLayout>

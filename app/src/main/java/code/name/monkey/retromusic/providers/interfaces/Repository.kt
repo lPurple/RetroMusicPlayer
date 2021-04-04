@@ -1,9 +1,23 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.providers.interfaces
 
+import code.name.monkey.retromusic.Result
 import code.name.monkey.retromusic.model.*
-import code.name.monkey.retromusic.model.smartplaylist.AbsSmartPlaylist
-import io.reactivex.Observable
-import java.util.*
+import code.name.monkey.retromusic.rest.model.LastFmAlbum
+import code.name.monkey.retromusic.rest.model.LastFmArtist
 
 /**
  * Created by hemanths on 11/08/17.
@@ -11,41 +25,37 @@ import java.util.*
 
 interface Repository {
 
-    val allSongs: Observable<ArrayList<Song>>
+    suspend fun allAlbums(): Result<ArrayList<Album>>
 
-    val suggestionSongs: Observable<ArrayList<Song>>
+    suspend fun albumById(albumId: Int): Result<Album>
 
-    val allAlbums: Observable<ArrayList<Album>>
+    suspend fun allSongs(): Result<ArrayList<Song>>
 
-    val recentAlbums: Observable<ArrayList<Album>>
+    suspend fun allArtists(): Result<ArrayList<Artist>>
 
-    val topAlbums: Observable<ArrayList<Album>>
+    suspend fun allPlaylists(): Result<ArrayList<Playlist>>
 
-    val allArtists: Observable<ArrayList<Artist>>
+    suspend fun allGenres(): Result<ArrayList<Genre>>
 
-    val recentArtists: Observable<ArrayList<Artist>>
+    suspend fun search(query: String?): Result<MutableList<Any>>
 
-    val topArtists: Observable<ArrayList<Artist>>
+    suspend fun getPlaylistSongs(playlist: Playlist): Result<ArrayList<Song>>
 
-    val allPlaylists: Observable<ArrayList<Playlist>>
+    suspend fun getGenre(genreId: Int): Result<ArrayList<Song>>
 
-    val homeList: Observable<ArrayList<Playlist>>
+    suspend fun recentArtists(): Result<Home>
 
-    val allThings: Observable<ArrayList<AbsSmartPlaylist>>
+    suspend fun topArtists(): Result<Home>
 
-    val allGenres: Observable<ArrayList<Genre>>
+    suspend fun topAlbums(): Result<Home>
 
-    fun getSong(id: Int): Observable<Song>
+    suspend fun recentAlbums(): Result<Home>
 
-    fun getAlbum(albumId: Int): Observable<Album>
+    suspend fun favoritePlaylist(): Result<Home>
 
-    fun getArtistById(artistId: Long): Observable<Artist>
+    suspend fun artistInfo(name: String, lang: String?, cache: String?): Result<LastFmArtist>
 
-    fun search(query: String?): Observable<ArrayList<Any>>
+    suspend fun albumInfo(artist: String, album: String): Result<LastFmAlbum>
 
-    fun getPlaylistSongs(playlist: Playlist): Observable<ArrayList<Song>>
-
-    fun getGenre(genreId: Int): Observable<ArrayList<Song>>
-
-
+    suspend fun artistById(artistId: Int): Result<Artist>
 }

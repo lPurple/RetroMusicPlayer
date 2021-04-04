@@ -5,12 +5,12 @@
         android:id="@+id/action_home"
         android:enabled="true"
         android:icon="@drawable/ic_home_white_24dp"
-        android:title="@string/home" />
+        android:title="@string/for_you" />
 
     <item
         android:id="@+id/action_song"
         android:enabled="true"
-        android:icon="@drawable/ic_audiotrack_black_24dp"
+        android:icon="@drawable/ic_audiotrack_white_24dp"
         android:title="@string/songs" />
     <item
         android:id="@+id/action_album"

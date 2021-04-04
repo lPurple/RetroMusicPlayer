@@ -1,39 +1,65 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.mvp.presenter
 
+import code.name.monkey.retromusic.Result
 import code.name.monkey.retromusic.model.Song
 import code.name.monkey.retromusic.mvp.Presenter
-import code.name.monkey.retromusic.mvp.contract.SongContract
-import java.util.*
+import code.name.monkey.retromusic.mvp.PresenterImpl
+import code.name.monkey.retromusic.providers.interfaces.Repository
+import kotlinx.coroutines.*
+import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Created by hemanths on 10/08/17.
  */
+interface SongView {
 
-class SongPresenter(private val view: SongContract.SongView) : Presenter(), SongContract.Presenter {
+    fun songs(songs: List<Song>)
 
-    override fun loadSongs() {
-        disposable.add(repository.allSongs
-                .subscribeOn(schedulerProvider.computation())
-                .observeOn(schedulerProvider.ui())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ this.showList(it) },
-                        { view.showEmptyView() },
-                        { view.completed() }))
-    }
+    fun showEmptyView()
+}
 
-    override fun subscribe() {
-        loadSongs()
-    }
+interface SongPresenter : Presenter<SongView> {
 
-    private fun showList(songs: ArrayList<Song>) {
-        if (songs.isEmpty()) {
-            view.showEmptyView()
-        } else {
-            view.showData(songs)
+    fun loadSongs()
+
+    class SongPresenterImpl @Inject constructor(
+        private val repository: Repository
+    ) : PresenterImpl<SongView>(), SongPresenter, CoroutineScope {
+
+        private var job: Job = Job()
+
+        override val coroutineContext: CoroutineContext
+            get() = Dispatchers.IO + job
+
+        override fun loadSongs() {
+            launch {
+                when (val songs = repository.allSongs()) {
+                    is Result.Success -> withContext(Dispatchers.Main) { view?.songs(songs.data) }
+                    is Result.Error -> withContext(Dispatchers.Main) { view?.showEmptyView() }
+                }
+            }
+        }
+
+        override fun detachView() {
+            super.detachView()
+            job.cancel()
         }
     }
-
-    override fun unsubscribe() {
-        disposable.clear()
-    }
 }
+
+

@@ -1,113 +1,69 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.mvp.presenter
 
+import code.name.monkey.retromusic.Result
+import code.name.monkey.retromusic.model.Home
+import code.name.monkey.retromusic.mvp.BaseView
 import code.name.monkey.retromusic.mvp.Presenter
-import code.name.monkey.retromusic.mvp.contract.HomeContract
-import code.name.monkey.retromusic.util.PreferenceUtil
-import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposable
+import code.name.monkey.retromusic.mvp.PresenterImpl
+import code.name.monkey.retromusic.providers.interfaces.Repository
+import kotlinx.coroutines.*
+import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 
-operator fun CompositeDisposable.plusAssign(disposable: Disposable) {
-    add(disposable)
+interface HomeView : BaseView {
+    fun sections(sections: List<Home>)
 }
 
-class HomePresenter(private val view: HomeContract.HomeView) : Presenter(), HomeContract.HomePresenter {
+interface HomePresenter : Presenter<HomeView> {
+    fun loadSections()
 
-    override fun subscribe() {
+    class HomePresenterImpl @Inject constructor(
+        private val repository: Repository
+    ) : PresenterImpl<HomeView>(), HomePresenter, CoroutineScope {
 
-        loadRecentAlbums()
-        loadRecentArtists()
-        loadTopAlbums()
-        loadTopArtists()
-        loadSuggestions()
+        private val job = Job()
 
-        if (PreferenceUtil.getInstance().isGenreShown) loadGenres()
+        override val coroutineContext: CoroutineContext
+            get() = Dispatchers.IO + job
 
-    }
-
-    override fun unsubscribe() {
-        if (!disposable.isDisposed) {
-            disposable.dispose()
+        override fun detachView() {
+            super.detachView()
+            job.cancel()
         }
-    }
 
-    fun loadPlaylists() {
-        disposable += repository.allPlaylists
-                .observeOn(schedulerProvider.ui())
-                .subscribeOn(schedulerProvider.io())
-                .subscribe({ playlist ->
-                    if (!playlist.isEmpty()) {
-                        view.playlists(playlist)
+        override fun loadSections() {
+            launch {
+                val list = ArrayList<Home>()
+                val recentArtistResult = listOf(
+                    repository.topArtists(),
+                    repository.topAlbums(),
+                    repository.recentArtists(),
+                    repository.recentAlbums(),
+                    repository.favoritePlaylist()
+                )
+                for (r in recentArtistResult) {
+                    when (r) {
+                        is Result.Success -> list.add(r.data)
                     }
-                }, { view.showEmptyView() }, { view.completed() })
-    }
-
-    override fun loadRecentAlbums() {
-        disposable += repository.recentAlbums
-                .observeOn(schedulerProvider.ui())
-                .subscribeOn(schedulerProvider.io())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ artists ->
-                    if (!artists.isEmpty()) {
-                        view.recentAlbum(artists)
-                    }
-                }, { view.showEmptyView() }, { view.completed() })
-    }
-
-    override fun loadTopAlbums() {
-        disposable += repository.topAlbums
-                .observeOn(schedulerProvider.ui())
-                .subscribeOn(schedulerProvider.io())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ artists ->
-                    if (!artists.isEmpty()) {
-                        view.topAlbums(artists)
-                    }
-                }, { view.showEmptyView() }, { view.completed() })
-    }
-
-    override fun loadRecentArtists() {
-        disposable += repository.recentArtists
-                .observeOn(schedulerProvider.ui())
-                .subscribeOn(schedulerProvider.io())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ artists ->
-                    if (!artists.isEmpty()) {
-                        view.recentArtist(artists)
-                    }
-                }, { view.showEmptyView() }, { view.completed() })
-    }
-
-    override fun loadTopArtists() {
-        disposable += repository.topArtists
-                .observeOn(schedulerProvider.ui())
-                .subscribeOn(schedulerProvider.io())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ artists ->
-                    if (!artists.isEmpty()) {
-                        view.topArtists(artists)
-                    }
-                }, { view.showEmptyView() }, { view.completed() })
-
-    }
-
-    override fun loadSuggestions() {
-        disposable += repository.suggestionSongs
-                .observeOn(schedulerProvider.ui())
-                .subscribeOn(schedulerProvider.io())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ songs -> view.suggestions(songs) },
-                        { view.showEmptyView() }, { view.completed() })
-    }
-
-    override fun loadGenres() {
-        disposable += repository.allGenres
-                .observeOn(schedulerProvider.ui())
-                .subscribeOn(schedulerProvider.io())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ genres ->
-                    if (!genres.isEmpty()) {
-                        view.geners(genres)
-                    }
-                }, { view.showEmptyView() }, { view.completed() })
+                }
+                withContext(Dispatchers.Main) {
+                    if (list.isNotEmpty()) view?.sections(list) else view?.showEmptyView()
+                }
+            }
+        }
     }
 }

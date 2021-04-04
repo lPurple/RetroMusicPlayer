@@ -1,6 +1,23 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.util;
 
 import android.util.Base64;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -19,8 +36,10 @@ public class LyricUtil {
 
     private static final String lrcRootPath = android.os.Environment
             .getExternalStorageDirectory().toString() + "/RetroMusic/lyrics/";
+    private static final String TAG = "LyricUtil";
 
-    public static File writeLrcToLoc(String title, String artist, String lrcContext) {
+    @Nullable
+    public static File writeLrcToLoc(@NonNull String title, @NonNull String artist, @NonNull String lrcContext) {
         FileWriter writer = null;
         try {
             File file = new File(getLrcPath(title, artist));
@@ -43,22 +62,23 @@ public class LyricUtil {
         }
     }
 
-    public static boolean deleteLrcFile(String title, String artist) {
+    public static boolean deleteLrcFile(@NonNull String title, @NonNull String artist) {
         File file = new File(getLrcPath(title, artist));
         return file.delete();
     }
 
-    public static boolean isLrcFileExist(String title, String artist) {
+    public static boolean isLrcFileExist(@NonNull String title, @NonNull String artist) {
         File file = new File(getLrcPath(title, artist));
         return file.exists();
     }
 
-    public static File getLocalLyricFile(String title, String artist) {
+    @Nullable
+    public static File getLocalLyricFile(@NonNull String title, @NonNull String artist) {
         File file = new File(getLrcPath(title, artist));
         if (file.exists()) {
             return file;
         } else {
-            return new File("lyric file not exist");
+            return null;
         }
     }
 
@@ -66,7 +86,8 @@ public class LyricUtil {
         return lrcRootPath + title + " - " + artist + ".lrc";
     }
 
-    public static String decryptBASE64(String str) {
+    @NonNull
+    public static String decryptBASE64(@NonNull String str) {
         if (str == null || str.length() == 0) {
             return null;
         }
@@ -82,7 +103,8 @@ public class LyricUtil {
         return null;
     }
 
-    public static String getStringFromFile(String title, String artist) throws Exception {
+    @NonNull
+    public static String getStringFromFile(@NonNull String title, @NonNull String artist) throws Exception {
         File file = new File(getLrcPath(title, artist));
         FileInputStream fin = new FileInputStream(file);
         String ret = convertStreamToString(fin);

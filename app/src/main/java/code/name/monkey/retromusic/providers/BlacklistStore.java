@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.providers;
 
 import android.content.ContentValues;
@@ -8,15 +22,15 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Environment;
 
+import androidx.annotation.NonNull;
+
 import java.io.File;
 import java.util.ArrayList;
 
-import androidx.annotation.NonNull;
-import code.name.monkey.retromusic.Constants;
 import code.name.monkey.retromusic.util.FileUtil;
 import code.name.monkey.retromusic.util.PreferenceUtil;
 
-import static code.name.monkey.retromusic.Constants.MEDIA_STORE_CHANGED;
+import static code.name.monkey.retromusic.service.MusicService.MEDIA_STORE_CHANGED;
 
 public class BlacklistStore extends SQLiteOpenHelper {
     public static final String DATABASE_NAME = "blacklist.db";
@@ -33,13 +47,13 @@ public class BlacklistStore extends SQLiteOpenHelper {
     public static synchronized BlacklistStore getInstance(@NonNull final Context context) {
         if (sInstance == null) {
             sInstance = new BlacklistStore(context.getApplicationContext());
-            if (!PreferenceUtil.getInstance().initializedBlacklist()) {
+            if (!PreferenceUtil.getInstance(context).initializedBlacklist()) {
                 // blacklisted by default
                 sInstance.addPathImpl(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_ALARMS));
                 sInstance.addPathImpl(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_NOTIFICATIONS));
                 sInstance.addPathImpl(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_RINGTONES));
 
-                PreferenceUtil.getInstance().setInitializedBlacklist();
+                PreferenceUtil.getInstance(context).setInitializedBlacklist();
             }
         }
         return sInstance;

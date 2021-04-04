@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.glide
 
 import android.content.Context
@@ -12,21 +26,13 @@ import code.name.monkey.retromusic.helper.StackBlur
 import code.name.monkey.retromusic.util.ImageUtil
 import com.bumptech.glide.load.engine.bitmap_recycle.BitmapPool
 import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
-import java.security.MessageDigest
 
 
 class BlurTransformation : BitmapTransformation {
+
     private var context: Context? = null
     private var blurRadius: Float = 0.toFloat()
     private var sampling: Int = 0
-
-    private constructor(builder: Builder) : super() {
-        init(builder)
-    }
-
-    private constructor(builder: Builder, bitmapPool: BitmapPool) : super() {
-        init(builder)
-    }
 
     private fun init(builder: Builder) {
         this.context = builder.context
@@ -34,71 +40,16 @@ class BlurTransformation : BitmapTransformation {
         this.sampling = builder.sampling
     }
 
-    override fun transform(pool: BitmapPool, toTransform: Bitmap, outWidth: Int, outHeight: Int): Bitmap? {
-        val sampling: Int
-        if (this.sampling == 0) {
-            sampling = ImageUtil.calculateInSampleSize(toTransform.width, toTransform.height, 100)
-        } else {
-            sampling = this.sampling
-        }
-
-        val width = toTransform.width
-        val height = toTransform.height
-        val scaledWidth = width / sampling
-        val scaledHeight = height / sampling
-
-        var out: Bitmap? = pool.get(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
-        if (out == null) {
-            out = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
-        }
-
-        val canvas = Canvas(out!!)
-        canvas.scale(1 / sampling.toFloat(), 1 / sampling.toFloat())
-        val paint = Paint()
-        paint.flags = Paint.FILTER_BITMAP_FLAG
-        canvas.drawBitmap(toTransform, 0f, 0f, paint)
-
-        if (Build.VERSION.SDK_INT >= 17) {
-            try {
-                val rs = RenderScript.create(context!!.applicationContext)
-                val input = Allocation.createFromBitmap(rs, out, Allocation.MipmapControl.MIPMAP_NONE, Allocation.USAGE_SCRIPT)
-                val output = Allocation.createTyped(rs, input.type)
-                val script = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs))
-
-                script.setRadius(blurRadius)
-                script.setInput(input)
-                script.forEach(output)
-
-                output.copyTo(out)
-
-                rs.destroy()
-
-                return out
-
-            } catch (e: RSRuntimeException) {
-                // on some devices RenderScript.create() throws: android.support.v8.renderscript.RSRuntimeException: Error loading libRSSupport library
-                if (BuildConfig.DEBUG) e.printStackTrace()
-            }
-
-        }
-
-        return StackBlur.blur(out, blurRadius)
+    private constructor(builder: Builder) : super(builder.context) {
+        init(builder)
     }
 
-    override fun equals(o: Any?): Boolean {
-        return o is BlurTransformation
-    }
-
-    override fun hashCode(): Int {
-        return ID.hashCode()
-    }
-
-    override fun updateDiskCacheKey(messageDigest: MessageDigest) {
-        messageDigest.update("BlurTransformation(radius=$blurRadius, sampling=$sampling)".toByteArray(CHARSET))
+    private constructor(builder: Builder, bitmapPool: BitmapPool) : super(bitmapPool) {
+        init(builder)
     }
 
     class Builder(val context: Context) {
-        var bitmapPool: BitmapPool? = null
+        private var bitmapPool: BitmapPool? = null
         var blurRadius = DEFAULT_BLUR_RADIUS
         var sampling: Int = 0
 
@@ -136,9 +87,72 @@ class BlurTransformation : BitmapTransformation {
         }
     }
 
-    companion object {
+    override fun transform(
+        pool: BitmapPool,
+        toTransform: Bitmap,
+        outWidth: Int,
+        outHeight: Int
+    ): Bitmap? {
+        val sampling: Int
+        if (this.sampling == 0) {
+            sampling = ImageUtil.calculateInSampleSize(toTransform.width, toTransform.height, 100)
+        } else {
+            sampling = this.sampling
+        }
 
+        val width = toTransform.width
+        val height = toTransform.height
+        val scaledWidth = width / sampling
+        val scaledHeight = height / sampling
+
+        var out: Bitmap? = pool.get(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
+        if (out == null) {
+            out = Bitmap.createBitmap(scaledWidth, scaledHeight, Bitmap.Config.ARGB_8888)
+        }
+
+        val canvas = Canvas(out!!)
+        canvas.scale(1 / sampling.toFloat(), 1 / sampling.toFloat())
+        val paint = Paint()
+        paint.flags = Paint.FILTER_BITMAP_FLAG
+        canvas.drawBitmap(toTransform, 0f, 0f, paint)
+
+        if (Build.VERSION.SDK_INT >= 17) {
+            try {
+                val rs = RenderScript.create(context!!.applicationContext)
+                val input = Allocation.createFromBitmap(
+                    rs,
+                    out,
+                    Allocation.MipmapControl.MIPMAP_NONE,
+                    Allocation.USAGE_SCRIPT
+                )
+                val output = Allocation.createTyped(rs, input.type)
+                val script = ScriptIntrinsicBlur.create(rs, Element.U8_4(rs))
+
+                script.setRadius(blurRadius)
+                script.setInput(input)
+                script.forEach(output)
+
+                output.copyTo(out)
+
+                rs.destroy()
+
+                return out
+
+            } catch (e: RSRuntimeException) {
+                // on some devices RenderScript.create() throws: android.support.v8.renderscript.RSRuntimeException: Error loading libRSSupport library
+                if (BuildConfig.DEBUG) e.printStackTrace()
+            }
+
+        }
+
+        return StackBlur.blur(out, blurRadius)
+    }
+
+    override fun getId(): String {
+        return "BlurTransformation(radius=$blurRadius, sampling=$sampling)"
+    }
+
+    companion object {
         val DEFAULT_BLUR_RADIUS = 5f
-        private val ID = "com.poupa.vinylmusicplayer.glide.BlurTransformation"
     }
 }

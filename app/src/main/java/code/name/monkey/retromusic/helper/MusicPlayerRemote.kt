@@ -1,49 +1,51 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.helper
 
 import android.annotation.TargetApi
 import android.app.Activity
 import android.content.*
+import android.database.Cursor
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.os.IBinder
 import android.provider.DocumentsContract
 import android.provider.MediaStore
-import android.util.Log
 import android.widget.Toast
-import code.name.monkey.retromusic.R
-import code.name.monkey.retromusic.App
+import androidx.core.content.ContextCompat
 import code.name.monkey.retromusic.loaders.SongLoader
 import code.name.monkey.retromusic.model.Song
 import code.name.monkey.retromusic.service.MusicService
 import code.name.monkey.retromusic.util.PreferenceUtil
-import com.google.android.gms.cast.framework.CastContext
-import com.google.android.gms.cast.framework.CastSession
-import io.reactivex.schedulers.Schedulers
 import java.io.File
 import java.util.*
 
-
 object MusicPlayerRemote {
-    val TAG = MusicPlayerRemote::class.java.simpleName
+    val TAG: String = MusicPlayerRemote::class.java.simpleName
     private val mConnectionMap = WeakHashMap<Context, ServiceBinder>()
     var musicService: MusicService? = null
-    private var playbackLocation = PlaybackLocation.LOCAL
-
-
-    private val castSession: CastSession?
-        get() {
-            val castSession = CastContext.getSharedInstance(App.instance).sessionManager.currentCastSession
-            if (castSession != null) {
-                playbackLocation = PlaybackLocation.REMOTE
-            } else {
-                playbackLocation = PlaybackLocation.LOCAL
-            }
-            return castSession
-        }
-
+    @JvmStatic
     val isPlaying: Boolean
         get() = musicService != null && musicService!!.isPlaying
+
+    fun isPlaying(song: Song): Boolean {
+        return if (!isPlaying) {
+            false
+        } else song.id == currentSong.id
+    }
 
     val currentSong: Song
         get() = if (musicService != null) {
@@ -62,10 +64,10 @@ object MusicPlayerRemote {
                 musicService!!.position = position
             }
         }
-
+    @JvmStatic
     val playingQueue: ArrayList<Song>
         get() = if (musicService != null) {
-            musicService!!.playingQueue
+            musicService?.playingQueue as ArrayList<Song>
         } else ArrayList()
 
     val songProgressMillis: Int
@@ -82,7 +84,7 @@ object MusicPlayerRemote {
         get() = if (musicService != null) {
             musicService!!.repeatMode
         } else MusicService.REPEAT_MODE_NONE
-
+    @JvmStatic
     val shuffleMode: Int
         get() = if (musicService != null) {
             musicService!!.shuffleMode
@@ -96,8 +98,7 @@ object MusicPlayerRemote {
     val isServiceConnected: Boolean
         get() = musicService != null
 
-    fun bindToService(context: Context,
-                      callback: ServiceConnection): ServiceToken? {
+    fun bindToService(context: Context, callback: ServiceConnection): ServiceToken? {
 
         var realActivity: Activity? = (context as Activity).parent
         if (realActivity == null) {
@@ -105,11 +106,20 @@ object MusicPlayerRemote {
         }
 
         val contextWrapper = ContextWrapper(realActivity)
-        contextWrapper.startService(Intent(contextWrapper, MusicService::class.java))
-
+        val intent = Intent(contextWrapper, MusicService::class.java)
+        try {
+            contextWrapper.startService(intent)
+        } catch (ignored: IllegalStateException) {
+            ContextCompat.startForegroundService(context, intent)
+        }
         val binder = ServiceBinder(callback)
 
-        if (contextWrapper.bindService(Intent().setClass(contextWrapper, MusicService::class.java), binder, Context.BIND_AUTO_CREATE)) {
+        if (contextWrapper.bindService(
+                Intent().setClass(contextWrapper, MusicService::class.java),
+                binder,
+                Context.BIND_AUTO_CREATE
+            )
+        ) {
             mConnectionMap[contextWrapper] = binder
             return ServiceToken(contextWrapper)
         }
@@ -129,78 +139,77 @@ object MusicPlayerRemote {
     }
 
     private fun getFilePathFromUri(context: Context, uri: Uri): String? {
-
+        var cursor: Cursor? = null
         val column = "_data"
         val projection = arrayOf(column)
+
         try {
-            context.contentResolver.query(uri, projection, null, null, null)!!.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    val column_index = cursor.getColumnIndexOrThrow(column)
-                    return cursor.getString(column_index)
-                }
+            cursor = context.contentResolver.query(uri, projection, null, null, null)
+            if (cursor != null && cursor.moveToFirst()) {
+                val columnIndex = cursor.getColumnIndexOrThrow(column)
+                return cursor.getString(columnIndex)
             }
         } catch (e: Exception) {
-            Log.e(TAG, e.message)
+            println(e.message)
+        } finally {
+            cursor?.close()
         }
-
         return null
+    }
+
+    fun getQueueDurationSongs(): Int {
+        return musicService?.playingQueue?.size ?: -1
     }
 
     /**
      * Async
      */
     fun playSongAt(position: Int) {
-        if (musicService != null) {
-            musicService!!.playSongAt(position)
-        }
+        musicService?.playSongAt(position)
     }
 
     fun pauseSong() {
-        if (musicService != null) {
-            musicService!!.pause()
-        }
+        musicService?.pause()
     }
 
     /**
      * Async
      */
     fun playNextSong() {
-        if (musicService != null) {
-            musicService!!.playNextSong(true)
-        }
+        musicService?.playNextSong(true)
     }
 
     /**
      * Async
      */
     fun playPreviousSong() {
-        if (musicService != null) {
-            musicService!!.playPreviousSong(true)
-        }
+        musicService?.playPreviousSong(true)
     }
 
     /**
      * Async
      */
     fun back() {
-        if (musicService != null) {
-            musicService!!.back(true)
-        }
+        musicService?.back(true)
     }
 
     fun resumePlaying() {
-        if (musicService != null) {
-            musicService!!.play()
-        }
+        musicService?.play()
     }
 
     /**
      * Async
      */
-    fun openQueue(queue: ArrayList<Song>, startPosition: Int, startPlaying: Boolean) {
-        if (!tryToHandleOpenPlayingQueue(queue, startPosition, startPlaying) && musicService != null) {
-            musicService!!.openQueue(queue, startPosition, startPlaying)
-            if (PreferenceUtil.getInstance().isShuffleModeOn)
+    @JvmStatic
+    fun openQueue(queue: List<Song>, startPosition: Int, startPlaying: Boolean) {
+        if (!tryToHandleOpenPlayingQueue(
+                queue,
+                startPosition,
+                startPlaying
+            ) && musicService != null
+        ) {
+            musicService?.openQueue(queue, startPosition, startPlaying)
+            if (PreferenceUtil.getInstance(musicService).isShuffleModeOn)
                 setShuffleMode(MusicService.SHUFFLE_MODE_NONE)
         }
     }
@@ -208,19 +217,29 @@ object MusicPlayerRemote {
     /**
      * Async
      */
-    fun openAndShuffleQueue(queue: ArrayList<Song>, startPlaying: Boolean) {
+    @JvmStatic
+    fun openAndShuffleQueue(queue: List<Song>, startPlaying: Boolean) {
         var startPosition = 0
-        if (!queue.isEmpty()) {
+        if (queue.isNotEmpty()) {
             startPosition = Random().nextInt(queue.size)
         }
 
-        if (!tryToHandleOpenPlayingQueue(queue, startPosition, startPlaying) && musicService != null) {
+        if (!tryToHandleOpenPlayingQueue(
+                queue,
+                startPosition,
+                startPlaying
+            ) && musicService != null
+        ) {
             openQueue(queue, startPosition, startPlaying)
             setShuffleMode(MusicService.SHUFFLE_MODE_SHUFFLE)
         }
     }
 
-    private fun tryToHandleOpenPlayingQueue(queue: ArrayList<Song>, startPosition: Int, startPlaying: Boolean): Boolean {
+    private fun tryToHandleOpenPlayingQueue(
+        queue: List<Song>,
+        startPosition: Int,
+        startPlaying: Boolean
+    ): Boolean {
         if (playingQueue === queue) {
             if (startPlaying) {
                 playSongAt(startPosition)
@@ -246,7 +265,7 @@ object MusicPlayerRemote {
 
     fun cycleRepeatMode(): Boolean {
         if (musicService != null) {
-            musicService!!.cycleRepeatMode()
+            musicService?.cycleRepeatMode()
             return true
         }
         return false
@@ -254,7 +273,7 @@ object MusicPlayerRemote {
 
     fun toggleShuffleMode(): Boolean {
         if (musicService != null) {
-            musicService!!.toggleShuffle()
+            musicService?.toggleShuffle()
             return true
         }
         return false
@@ -271,26 +290,34 @@ object MusicPlayerRemote {
     fun playNext(song: Song): Boolean {
         if (musicService != null) {
             if (playingQueue.size > 0) {
-                musicService!!.addSong(position + 1, song)
+                musicService?.addSong(position + 1, song)
             } else {
                 val queue = ArrayList<Song>()
                 queue.add(song)
                 openQueue(queue, 0, false)
             }
-            Toast.makeText(musicService, musicService!!.resources.getString(R.string.added_title_to_playing_queue), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                musicService,
+                musicService!!.resources.getString(code.name.monkey.retromusic.R.string.added_title_to_playing_queue),
+                Toast.LENGTH_SHORT
+            ).show()
             return true
         }
         return false
     }
 
-    fun playNext(songs: ArrayList<Song>): Boolean {
+    fun playNext(songs: List<Song>): Boolean {
         if (musicService != null) {
             if (playingQueue.size > 0) {
-                musicService!!.addSongs(position + 1, songs)
+                musicService?.addSongs(position + 1, songs)
             } else {
                 openQueue(songs, 0, false)
             }
-            val toast = if (songs.size == 1) musicService!!.resources.getString(R.string.added_title_to_playing_queue) else musicService!!.resources.getString(R.string.added_x_titles_to_playing_queue, songs.size)
+            val toast =
+                if (songs.size == 1) musicService!!.resources.getString(code.name.monkey.retromusic.R.string.added_title_to_playing_queue) else musicService!!.resources.getString(
+                    code.name.monkey.retromusic.R.string.added_x_titles_to_playing_queue,
+                    songs.size
+                )
             Toast.makeText(musicService, toast, Toast.LENGTH_SHORT).show()
             return true
         }
@@ -300,32 +327,41 @@ object MusicPlayerRemote {
     fun enqueue(song: Song): Boolean {
         if (musicService != null) {
             if (playingQueue.size > 0) {
-                musicService!!.addSong(song)
+                musicService?.addSong(song)
             } else {
                 val queue = ArrayList<Song>()
                 queue.add(song)
                 openQueue(queue, 0, false)
             }
-            Toast.makeText(musicService, musicService!!.resources.getString(R.string.added_title_to_playing_queue), Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                musicService,
+                musicService!!.resources.getString(code.name.monkey.retromusic.R.string.added_title_to_playing_queue),
+                Toast.LENGTH_SHORT
+            ).show()
             return true
         }
         return false
     }
 
-    fun enqueue(songs: ArrayList<Song>): Boolean {
+    fun enqueue(songs: List<Song>): Boolean {
         if (musicService != null) {
             if (playingQueue.size > 0) {
-                musicService!!.addSongs(songs)
+                musicService?.addSongs(songs)
             } else {
                 openQueue(songs, 0, false)
             }
-            val toast = if (songs.size == 1) musicService!!.resources.getString(R.string.added_title_to_playing_queue) else musicService!!.resources.getString(R.string.added_x_titles_to_playing_queue, songs.size)
+            val toast =
+                if (songs.size == 1) musicService!!.resources.getString(code.name.monkey.retromusic.R.string.added_title_to_playing_queue) else musicService!!.resources.getString(
+                    code.name.monkey.retromusic.R.string.added_x_titles_to_playing_queue,
+                    songs.size
+                )
             Toast.makeText(musicService, toast, Toast.LENGTH_SHORT).show()
             return true
         }
         return false
     }
 
+    @JvmStatic
     fun removeFromQueue(song: Song): Boolean {
         if (musicService != null) {
             musicService!!.removeSong(song)
@@ -358,9 +394,11 @@ object MusicPlayerRemote {
         return false
     }
 
+    @JvmStatic
     fun playFromUri(uri: Uri) {
         if (musicService != null) {
-            var songs: ArrayList<Song>? = null
+
+            var songs: List<Song>? = null
             if (uri.scheme != null && uri.authority != null) {
                 if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
                     var songId: String? = null
@@ -370,23 +408,24 @@ object MusicPlayerRemote {
                         songId = uri.lastPathSegment
                     }
                     if (songId != null) {
-                        /* songs = SongLoader.getSongs(SongLoader.makeSongCursor(
-                                musicService,
-                                MediaStore.Audio.AudioColumns._ID + "=?",
-                                new String[]{songId}
-                        ));*/
-                        songs = SongLoader.getSongs(SongLoader.makeSongCursor(
+                        songs = SongLoader.getSongs(
+                            SongLoader.makeSongCursor(
                                 musicService!!,
                                 MediaStore.Audio.AudioColumns._ID + "=?",
-                                arrayOf(songId)))
-                                .subscribeOn(Schedulers.io()).blockingFirst()
+                                arrayOf(songId)
+                            )
+                        )
                     }
                 }
             }
             if (songs == null) {
                 var songFile: File? = null
                 if (uri.authority != null && uri.authority == "com.android.externalstorage.documents") {
-                    songFile = File(Environment.getExternalStorageDirectory(), uri.path!!.split(":".toRegex(), 2).toTypedArray()[1])
+                    songFile =
+                        File(
+                            Environment.getExternalStorageDirectory(),
+                            uri.path?.split(":".toRegex(), 2)?.get(1)
+                        )
                 }
                 if (songFile == null) {
                     val path = getFilePathFromUri(musicService!!, uri)
@@ -397,14 +436,20 @@ object MusicPlayerRemote {
                     songFile = File(uri.path)
                 }
                 if (songFile != null) {
-                    songs = SongLoader.getSongs(SongLoader.makeSongCursor(musicService!!, MediaStore.Audio.AudioColumns.DATA + "=?", arrayOf(songFile.absolutePath)
-                    )).blockingFirst()
+                    songs = SongLoader.getSongs(
+                        SongLoader.makeSongCursor(
+                            musicService!!,
+                            MediaStore.Audio.AudioColumns.DATA + "=?",
+                            arrayOf(songFile.absolutePath)
+                        )
+                    )
                 }
             }
-            if (songs != null && !songs.isEmpty()) {
+            if (songs != null && songs.isNotEmpty()) {
                 openQueue(songs, 0, true)
             } else {
                 //TODO the file is not listed in the media store
+                println("The file is not listed in the media store")
             }
         }
     }
@@ -414,14 +459,8 @@ object MusicPlayerRemote {
         return DocumentsContract.getDocumentId(uri).split(":".toRegex()).dropLastWhile { it.isEmpty() }.toTypedArray()[1]
     }
 
-    internal annotation class PlaybackLocation {
-        companion object {
-            val REMOTE = 0
-            val LOCAL = 1
-        }
-    }
-
-    class ServiceBinder internal constructor(private val mCallback: ServiceConnection?) : ServiceConnection {
+    class ServiceBinder internal constructor(private val mCallback: ServiceConnection?) :
+        ServiceConnection {
 
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
             val binder = service as MusicService.MusicBinder
@@ -436,5 +475,4 @@ object MusicPlayerRemote {
     }
 
     class ServiceToken internal constructor(internal var mWrappedContext: ContextWrapper)
-
 }

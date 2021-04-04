@@ -1,55 +1,74 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.dialogs
 
-import android.os.Build
+import android.app.Dialog
 import android.os.Bundle
-import android.text.Html
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import code.name.monkey.appthemehelper.ThemeStore
+import androidx.core.text.HtmlCompat
+import androidx.fragment.app.DialogFragment
 import code.name.monkey.retromusic.R
+import code.name.monkey.retromusic.R.string
 import code.name.monkey.retromusic.model.PlaylistSong
 import code.name.monkey.retromusic.util.PlaylistsUtil
-import code.name.monkey.retromusic.views.RoundedBottomSheetDialogFragment
-import kotlinx.android.synthetic.main.dialog_remove_from_playlist.*
-import java.util.*
+import code.name.monkey.retromusic.util.PreferenceUtil
+import com.afollestad.materialdialogs.LayoutMode
+import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.bottomsheets.BottomSheet
 
+class RemoveFromPlaylistDialog : DialogFragment() {
 
-class RemoveFromPlaylistDialog : RoundedBottomSheetDialogFragment() {
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val songs = requireArguments().getParcelableArrayList<PlaylistSong>("songs")
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-
-        return inflater.inflate(R.layout.dialog_remove_from_playlist, container, false)
-    }
-
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-
-        val songs = arguments!!.getParcelableArrayList<PlaylistSong>("songs")
-        val title: Int
-        val content: CharSequence
-        if (songs != null && songs.size > 1) {
-            title = R.string.remove_songs_from_playlist_title
-            content = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                Html.fromHtml(getString(R.string.remove_x_songs_from_playlist, songs.size), Html.FROM_HTML_MODE_LEGACY)
+        var title = 0
+        var content: CharSequence = ""
+        if (songs != null) {
+            if (songs.size > 1) {
+                title = R.string.remove_songs_from_playlist_title
+                content = HtmlCompat.fromHtml(
+                    getString(string.remove_x_songs_from_playlist, songs.size),
+                    HtmlCompat.FROM_HTML_MODE_LEGACY
+                )
             } else {
-                Html.fromHtml(getString(R.string.remove_x_songs_from_playlist, songs.size))
+                title = R.string.remove_song_from_playlist_title
+                content = HtmlCompat.fromHtml(
+                    getString(
+                        code.name.monkey.retromusic.R.string.remove_song_x_from_playlist,
+                        songs[0].title
+                    ),
+                    HtmlCompat.FROM_HTML_MODE_LEGACY
+                )
             }
-        } else {
-            title = R.string.remove_song_from_playlist_title
-            content = Html.fromHtml(getString(R.string.remove_song_x_from_playlist, songs!![0].title))
         }
-        actionRemove.text = content
-        bannerTitle.setText(title)
 
-        bannerTitle.setTextColor(ThemeStore.textColorPrimary(context!!))
-        actionRemove.setTextColor(ThemeStore.textColorSecondary(context!!))
-        actionCancel.setTextColor(ThemeStore.textColorSecondary(context!!))
 
-        actionRemove.setOnClickListener {
-            PlaylistsUtil.removeFromPlaylist(activity!!, songs)
-        }
-        actionCancel.setOnClickListener { dismiss() }
+        return MaterialDialog(requireContext(), BottomSheet(LayoutMode.WRAP_CONTENT))
+            .show {
+                title(title)
+                message(text = content)
+                negativeButton(android.R.string.cancel)
+                positiveButton(R.string.remove_action) {
+                    if (activity == null)
+                        return@positiveButton
+                    PlaylistsUtil.removeFromPlaylist(
+                        requireContext(),
+                        songs as MutableList<PlaylistSong>
+                    )
+                }
+                cornerRadius(PreferenceUtil.getInstance(requireContext()).dialogCorner)
+            }
     }
 
     companion object {

@@ -1,12 +1,15 @@
 /*
- * Copyright (C) 2007 The Android Open Source Project Licensed under the Apache
- * License, Version 2.0 (the "License"); you may not use this file except in
- * compliance with the License. You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law
- * or agreed to in writing, software distributed under the License is
- * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the specific language
- * governing permissions and limitations under the License.
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  */
 
 
@@ -16,21 +19,16 @@ import android.annotation.SuppressLint
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.os.Handler
 import android.os.Message
 import android.os.PowerManager
 import android.os.PowerManager.WakeLock
 import android.util.Log
 import android.view.KeyEvent
-
+import androidx.core.content.ContextCompat
 import code.name.monkey.retromusic.BuildConfig
-import code.name.monkey.retromusic.Constants.ACTION_PAUSE
-import code.name.monkey.retromusic.Constants.ACTION_PLAY
-import code.name.monkey.retromusic.Constants.ACTION_REWIND
-import code.name.monkey.retromusic.Constants.ACTION_SKIP
-import code.name.monkey.retromusic.Constants.ACTION_STOP
-import code.name.monkey.retromusic.Constants.ACTION_TOGGLE_PAUSE
+import code.name.monkey.retromusic.service.MusicService.*
+
 
 /**
  * Used to control headset playback.
@@ -48,11 +46,11 @@ class MediaButtonIntentReceiver : BroadcastReceiver() {
     }
 
     companion object {
-        val TAG = MediaButtonIntentReceiver::class.java.simpleName
+        val TAG: String = MediaButtonIntentReceiver::class.java.simpleName
         private val DEBUG = BuildConfig.DEBUG
-        private val MSG_HEADSET_DOUBLE_CLICK_TIMEOUT = 2
+        private const val MSG_HEADSET_DOUBLE_CLICK_TIMEOUT = 2
 
-        private val DOUBLE_CLICK = 400
+        private const val DOUBLE_CLICK = 400
 
         private var wakeLock: WakeLock? = null
         private var mClickCounter = 0
@@ -89,7 +87,7 @@ class MediaButtonIntentReceiver : BroadcastReceiver() {
             val intentAction = intent.action
             if (Intent.ACTION_MEDIA_BUTTON == intentAction) {
                 val event = intent.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT)
-                        ?: return false
+                    ?: return false
 
                 val keycode = event.keyCode
                 val action = event.action
@@ -101,7 +99,8 @@ class MediaButtonIntentReceiver : BroadcastReceiver() {
                 var command: String? = null
                 when (keycode) {
                     KeyEvent.KEYCODE_MEDIA_STOP -> command = ACTION_STOP
-                    KeyEvent.KEYCODE_HEADSETHOOK, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> command = ACTION_TOGGLE_PAUSE
+                    KeyEvent.KEYCODE_HEADSETHOOK, KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE -> command =
+                        ACTION_TOGGLE_PAUSE
                     KeyEvent.KEYCODE_MEDIA_NEXT -> command = ACTION_SKIP
                     KeyEvent.KEYCODE_MEDIA_PREVIOUS -> command = ACTION_REWIND
                     KeyEvent.KEYCODE_MEDIA_PAUSE -> command = ACTION_PAUSE
@@ -127,7 +126,8 @@ class MediaButtonIntentReceiver : BroadcastReceiver() {
                                 mHandler.removeMessages(MSG_HEADSET_DOUBLE_CLICK_TIMEOUT)
 
                                 val msg = mHandler.obtainMessage(
-                                        MSG_HEADSET_DOUBLE_CLICK_TIMEOUT, mClickCounter, 0, context)
+                                    MSG_HEADSET_DOUBLE_CLICK_TIMEOUT, mClickCounter, 0, context
+                                )
 
                                 val delay = (if (mClickCounter < 3) DOUBLE_CLICK else 0).toLong()
                                 if (mClickCounter >= 3) {
@@ -149,10 +149,16 @@ class MediaButtonIntentReceiver : BroadcastReceiver() {
         private fun startService(context: Context, command: String?) {
             val intent = Intent(context, MusicService::class.java)
             intent.action = command
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                context.startForegroundService(intent)
-            } else {
+            try {
+                // IMPORTANT NOTE: (kind of a hack)
+                // on Android O and above the following crashes when the app is not running
+                // there is no good way to check whether the app is running so we catch the exception
+                // we do not always want to use startForegroundService() because then one gets an ANR
+                // if no notification is displayed via startForeground()
+                // according to Play analytics this happens a lot, I suppose for example if command = PAUSE
                 context.startService(intent)
+            } catch (ignored: IllegalStateException) {
+                ContextCompat.startForegroundService(context, intent)
             }
         }
 
@@ -160,7 +166,10 @@ class MediaButtonIntentReceiver : BroadcastReceiver() {
             if (wakeLock == null) {
                 val appContext = context.applicationContext
                 val pm = appContext.getSystemService(Context.POWER_SERVICE) as PowerManager
-                wakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "RetroMusicApp:Wakelock headset button")
+                wakeLock = pm.newWakeLock(
+                    PowerManager.PARTIAL_WAKE_LOCK,
+                    "RetroMusicApp:Wakelock headset button"
+                )
                 wakeLock!!.setReferenceCounted(false)
             }
             if (DEBUG) Log.v(TAG, "Acquiring wake lock and sending " + msg.what)

@@ -1,13 +1,24 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.transform
 
 import android.content.Context
 import android.view.View
 import androidx.viewpager.widget.ViewPager
+import kotlin.math.abs
 
-/**
- * 实现ViewPager左右滑动时的时差
- * Created by xmuSistone on 2016/9/18.
- */
 class CarousalPagerTransformer(context: Context) : ViewPager.PageTransformer {
 
     private val maxTranslateOffsetX: Int
@@ -25,8 +36,8 @@ class CarousalPagerTransformer(context: Context) : ViewPager.PageTransformer {
         val leftInScreen = view.left - viewPager!!.scrollX
         val centerXInViewPager = leftInScreen + view.measuredWidth / 2
         val offsetX = centerXInViewPager - viewPager!!.measuredWidth / 2
-        val offsetRate = offsetX.toFloat() * 0.20f / viewPager!!.measuredWidth
-        val scaleFactor = 1 - Math.abs(offsetRate)
+        val offsetRate = offsetX.toFloat() * 0.30f / viewPager!!.measuredWidth
+        val scaleFactor = 1 - abs(offsetRate)
         if (scaleFactor > 0) {
             view.scaleX = scaleFactor
             view.scaleY = scaleFactor

@@ -1,14 +1,32 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.model.lyrics;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class SynchronizedLyricsLRC extends AbsSynchronizedLyrics {
+
     private static final Pattern LRC_LINE_PATTERN = Pattern.compile("((?:\\[.*?\\])+)(.*)");
+
     private static final Pattern LRC_TIME_PATTERN = Pattern.compile("\\[(\\d+):(\\d{2}(?:\\.\\d+)?)\\]");
+
     private static final Pattern LRC_ATTRIBUTE_PATTERN = Pattern.compile("\\[(\\D+):(.+)\\]");
 
     private static final float LRC_SECONDS_TO_MS_MULTIPLIER = 1000f;
+
     private static final int LRC_MINUTES_TO_MS_MULTIPLIER = 60000;
 
     @Override
@@ -57,7 +75,9 @@ class SynchronizedLyricsLRC extends AbsSynchronizedLyrics {
                         int ms = (int) (s * LRC_SECONDS_TO_MS_MULTIPLIER) + m * LRC_MINUTES_TO_MS_MULTIPLIER;
 
                         this.valid = true;
-                        if (check) return this;
+                        if (check) {
+                            return this;
+                        }
 
                         this.lines.append(ms, text);
                     }

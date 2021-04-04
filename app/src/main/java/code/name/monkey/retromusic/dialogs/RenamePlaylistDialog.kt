@@ -1,53 +1,75 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.dialogs
 
-import android.content.res.ColorStateList
+import android.app.Dialog
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import code.name.monkey.appthemehelper.ThemeStore
+import android.provider.MediaStore.Audio.Playlists.Members.PLAYLIST_ID
+import android.widget.TextView
+import androidx.fragment.app.DialogFragment
 import code.name.monkey.appthemehelper.util.MaterialUtil
 import code.name.monkey.retromusic.R
+import code.name.monkey.retromusic.R.layout
+import code.name.monkey.retromusic.R.string
+import code.name.monkey.retromusic.extensions.appHandleColor
 import code.name.monkey.retromusic.util.PlaylistsUtil
-import code.name.monkey.retromusic.views.RoundedBottomSheetDialogFragment
-import kotlinx.android.synthetic.main.dialog_playlist.*
+import code.name.monkey.retromusic.util.PreferenceUtil
+import com.afollestad.materialdialogs.LayoutMode
+import com.afollestad.materialdialogs.MaterialDialog
+import com.afollestad.materialdialogs.bottomsheets.BottomSheet
+import com.afollestad.materialdialogs.customview.customView
+import com.afollestad.materialdialogs.customview.getCustomView
+import com.google.android.material.textfield.TextInputEditText
+import com.google.android.material.textfield.TextInputLayout
 
-class RenamePlaylistDialog : RoundedBottomSheetDialogFragment() {
+class RenamePlaylistDialog : DialogFragment() {
+    private lateinit var playlistView: TextInputEditText
+    private lateinit var actionNewPlaylistContainer: TextInputLayout
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?,
-                              savedInstanceState: Bundle?): View? {
+    override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+        val materialDialog = MaterialDialog(requireContext(), BottomSheet(LayoutMode.WRAP_CONTENT))
+            .show {
+                cornerRadius(PreferenceUtil.getInstance(requireContext()).dialogCorner)
+                title(string.rename_playlist_title)
+                customView(layout.dialog_playlist)
+                negativeButton(android.R.string.cancel)
+                positiveButton(string.action_rename) {
+                    if (playlistView.toString().trim { it <= ' ' } != "") {
+                        val playlistId = requireArguments().getLong(PLAYLIST_ID)
+                        PlaylistsUtil.renamePlaylist(
+                            context,
+                            playlistId,
+                            playlistView.text!!.toString()
+                        )
+                    }
+                }
+            }
 
-        return inflater.inflate(R.layout.dialog_playlist, container, false)
-    }
+        val dialogView = materialDialog.getCustomView()
+        playlistView = dialogView.findViewById(R.id.actionNewPlaylist)
+        actionNewPlaylistContainer = dialogView.findViewById(R.id.actionNewPlaylistContainer)
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        val accentColor = ThemeStore.accentColor(context!!)
-        actionCreate.setText(R.string.action_rename)
-
-        MaterialUtil.setTint(actionCreate, true)
-        MaterialUtil.setTint(actionCancel, false)
         MaterialUtil.setTint(actionNewPlaylistContainer, false)
 
-        actionNewPlaylist.apply {
-            var playlistId: Long = 0
-            if (arguments != null) {
-                playlistId = arguments!!.getLong("playlist_id")
-            }
-            setText(PlaylistsUtil.getNameForPlaylist(activity!!, playlistId))
-            setHintTextColor(ColorStateList.valueOf(accentColor))
-            setTextColor(ThemeStore.textColorPrimary(context!!))
-        }
-
-        bannerTitle.setTextColor(ThemeStore.textColorPrimary(context!!))
-        bannerTitle.setText(R.string.rename_playlist_title)
-        actionCancel.setOnClickListener { dismiss() }
-        actionCreate.setOnClickListener {
-            if (actionNewPlaylist.toString().trim { it <= ' ' } != "") {
-                val playlistId = arguments!!.getLong("playlist_id")
-                PlaylistsUtil.renamePlaylist(context!!, playlistId, actionNewPlaylist.text!!.toString())
-            }
-        }
+        val playlistId = arguments!!.getLong(PLAYLIST_ID)
+        playlistView.appHandleColor()
+            .setText(
+                PlaylistsUtil.getNameForPlaylist(context!!, playlistId),
+                TextView.BufferType.EDITABLE
+            )
+        return materialDialog
     }
 
     companion object {
@@ -55,7 +77,7 @@ class RenamePlaylistDialog : RoundedBottomSheetDialogFragment() {
         fun create(playlistId: Long): RenamePlaylistDialog {
             val dialog = RenamePlaylistDialog()
             val args = Bundle()
-            args.putLong("playlist_id", playlistId)
+            args.putLong(PLAYLIST_ID, playlistId)
             dialog.arguments = args
             return dialog
         }

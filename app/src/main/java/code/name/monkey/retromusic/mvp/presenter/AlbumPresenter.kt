@@ -1,36 +1,63 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.mvp.presenter
 
+import code.name.monkey.retromusic.Result.Error
+import code.name.monkey.retromusic.Result.Success
 import code.name.monkey.retromusic.model.Album
+import code.name.monkey.retromusic.mvp.BaseView
 import code.name.monkey.retromusic.mvp.Presenter
-import code.name.monkey.retromusic.mvp.contract.AlbumContract
-import java.util.*
-
+import code.name.monkey.retromusic.mvp.PresenterImpl
+import code.name.monkey.retromusic.providers.interfaces.Repository
+import kotlinx.coroutines.*
+import javax.inject.Inject
+import kotlin.coroutines.CoroutineContext
 
 /**
  * Created by hemanths on 12/08/17.
  */
+interface AlbumsView : BaseView {
 
-class AlbumPresenter(private val view: AlbumContract.AlbumView) : Presenter(), AlbumContract.Presenter {
+    fun albums(albums: List<Album>)
+}
 
-    override fun subscribe() {
-        loadAlbums()
-    }
+interface AlbumsPresenter : Presenter<AlbumsView> {
 
-    override fun unsubscribe() {
-        disposable.clear()
-    }
+    fun loadAlbums()
 
-    private fun showList(albums: ArrayList<Album>) {
-        view.showData(albums)
-    }
+    class AlbumsPresenterImpl @Inject constructor(
+        private val repository: Repository
+    ) : PresenterImpl<AlbumsView>(), AlbumsPresenter, CoroutineScope {
 
-    override fun loadAlbums() {
-        disposable.add(repository.allAlbums
-                .subscribeOn(schedulerProvider.computation())
-                .observeOn(schedulerProvider.ui())
-                .doOnSubscribe { view.loading() }
-                .subscribe({ this.showList(it) },
-                        { view.showEmptyView() },
-                        { view.completed() }))
+        private val job = Job()
+
+        override val coroutineContext: CoroutineContext
+            get() = Dispatchers.IO + job
+
+        override fun detachView() {
+            super.detachView()
+            job.cancel()
+        }
+
+        override fun loadAlbums() {
+            launch {
+                when (val result = repository.allAlbums()) {
+                    is Success -> withContext(Dispatchers.Main) { view?.albums(result.data) }
+                    is Error -> withContext(Dispatchers.Main) { view?.showEmptyView() }
+                }
+            }
+        }
     }
 }

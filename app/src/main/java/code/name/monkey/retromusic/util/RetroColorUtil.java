@@ -1,9 +1,24 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.util;
 
 import android.content.Context;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -17,9 +32,17 @@ import java.util.List;
 import code.name.monkey.appthemehelper.util.ColorUtil;
 
 public class RetroColorUtil {
+    public static int desaturateColor(int color, float ratio) {
+        float[] hsv = new float[3];
+        Color.colorToHSV(color, hsv);
+
+        hsv[1] = (hsv[1] / 1 * ratio) + (0.2f * (1.0f - ratio));
+
+        return Color.HSVToColor(hsv);
+    }
 
     @Nullable
-    public static Palette generatePalette(Bitmap bitmap) {
+    public static Palette generatePalette(@Nullable Bitmap bitmap) {
         return bitmap == null ? null : Palette.from(bitmap).clearFilters().generate();
     }
 
@@ -40,9 +63,9 @@ public class RetroColorUtil {
         int background = getSwatch(palette).getRgb();
 
         if (inverse != -1) {
-            return ColorUtils.getReadableText(inverse, background, 150);
+            return ColorUtil.INSTANCE.getReadableText(inverse, background, 150);
         }
-        return ColorUtil.stripAlpha(getSwatch(palette).getTitleTextColor());
+        return ColorUtil.INSTANCE.stripAlpha(getSwatch(palette).getTitleTextColor());
     }
 
     @NonNull
@@ -163,12 +186,19 @@ public class RetroColorUtil {
 
     @ColorInt
     public static int shiftBackgroundColorForLightText(@ColorInt int backgroundColor) {
-        while (ColorUtil.isColorLight(backgroundColor)) {
-            backgroundColor = ColorUtil.darkenColor(backgroundColor);
+        while (ColorUtil.INSTANCE.isColorLight(backgroundColor)) {
+            backgroundColor = ColorUtil.INSTANCE.darkenColor(backgroundColor);
         }
         return backgroundColor;
     }
 
+    @ColorInt
+    public static int shiftBackgroundColorForDarkText(@ColorInt int backgroundColor) {
+        while (!ColorUtil.INSTANCE.isColorLight(backgroundColor)) {
+            backgroundColor = ColorUtil.INSTANCE.lightenColor(backgroundColor);
+        }
+        return backgroundColor;
+    }
 
     private static class SwatchComparator implements Comparator<Palette.Swatch> {
 

@@ -1,18 +1,16 @@
 /*
-* Copyright (C) 2014 The CyanogenMod Project
-*
-* Licensed under the Apache License, Version 2.0 (the "License");
-* you may not use this file except in compliance with the License.
-* You may obtain a copy of the License at
-*
-* http://www.apache.org/licenses/LICENSE-2.0
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-*/
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
 package code.name.monkey.retromusic.providers;
 
 import android.content.ContentValues;
@@ -22,26 +20,30 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.provider.MediaStore.Audio.AudioColumns;
+
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+
+import java.util.ArrayList;
 
 import code.name.monkey.retromusic.loaders.SongLoader;
 import code.name.monkey.retromusic.model.Song;
 
-import java.util.ArrayList;
-
-import io.reactivex.Observable;
-
 /**
  * @author Andrew Neal, modified for Phonograph by Karim Abou Zeid
- *         <p/>
- *         This keeps track of the music playback and history state of the playback service
+ * <p/>
+ * This keeps track of the music playback and history state of the playback service
  */
 public class MusicPlaybackQueueStore extends SQLiteOpenHelper {
+
     public static final String DATABASE_NAME = "music_playback_state.db";
+
     public static final String PLAYING_QUEUE_TABLE_NAME = "playing_queue";
+
     public static final String ORIGINAL_PLAYING_QUEUE_TABLE_NAME = "original_playing_queue";
-    private static final int VERSION = 5;
+
+    private static final int VERSION = 10;
+
     @Nullable
     private static MusicPlaybackQueueStore sInstance = null;
 
@@ -50,7 +52,7 @@ public class MusicPlaybackQueueStore extends SQLiteOpenHelper {
      *
      * @param context The {@link Context} to use
      */
-    public MusicPlaybackQueueStore(final Context context) {
+    public MusicPlaybackQueueStore(final @NonNull Context context) {
         super(context, DATABASE_NAME, null, VERSION);
     }
 
@@ -70,6 +72,38 @@ public class MusicPlaybackQueueStore extends SQLiteOpenHelper {
     public void onCreate(@NonNull final SQLiteDatabase db) {
         createTable(db, PLAYING_QUEUE_TABLE_NAME);
         createTable(db, ORIGINAL_PLAYING_QUEUE_TABLE_NAME);
+    }
+
+    @NonNull
+    public ArrayList<Song> getSavedOriginalPlayingQueue() {
+        return getQueue(ORIGINAL_PLAYING_QUEUE_TABLE_NAME);
+    }
+
+    @NonNull
+    public ArrayList<Song> getSavedPlayingQueue() {
+        return getQueue(PLAYING_QUEUE_TABLE_NAME);
+    }
+
+    @Override
+    public void onDowngrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
+        // If we ever have downgrade, drop the table to be safe
+        db.execSQL("DROP TABLE IF EXISTS " + PLAYING_QUEUE_TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + ORIGINAL_PLAYING_QUEUE_TABLE_NAME);
+        onCreate(db);
+    }
+
+    @Override
+    public void onUpgrade(@NonNull final SQLiteDatabase db, final int oldVersion, final int newVersion) {
+        // not necessary yet
+        db.execSQL("DROP TABLE IF EXISTS " + PLAYING_QUEUE_TABLE_NAME);
+        db.execSQL("DROP TABLE IF EXISTS " + ORIGINAL_PLAYING_QUEUE_TABLE_NAME);
+        onCreate(db);
+    }
+
+    public synchronized void saveQueues(@NonNull final ArrayList<Song> playingQueue,
+                                        @NonNull final ArrayList<Song> originalPlayingQueue) {
+        saveQueue(PLAYING_QUEUE_TABLE_NAME, playingQueue);
+        saveQueue(ORIGINAL_PLAYING_QUEUE_TABLE_NAME, originalPlayingQueue);
     }
 
     private void createTable(@NonNull final SQLiteDatabase db, final String tableName) {
@@ -110,30 +144,19 @@ public class MusicPlaybackQueueStore extends SQLiteOpenHelper {
         builder.append(" INT NOT NULL,");
 
         builder.append(AudioColumns.ARTIST);
-        builder.append(" STRING NOT NULL);");
+        builder.append(" STRING NOT NULL,");
+
+        builder.append(AudioColumns.COMPOSER);
+        builder.append(" STRING);");
 
         db.execSQL(builder.toString());
     }
 
-    @Override
-    public void onUpgrade(@NonNull final SQLiteDatabase db, final int oldVersion, final int newVersion) {
-        // not necessary yet
-        db.execSQL("DROP TABLE IF EXISTS " + PLAYING_QUEUE_TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + ORIGINAL_PLAYING_QUEUE_TABLE_NAME);
-        onCreate(db);
-    }
-
-    @Override
-    public void onDowngrade(@NonNull SQLiteDatabase db, int oldVersion, int newVersion) {
-        // If we ever have downgrade, drop the table to be safe
-        db.execSQL("DROP TABLE IF EXISTS " + PLAYING_QUEUE_TABLE_NAME);
-        db.execSQL("DROP TABLE IF EXISTS " + ORIGINAL_PLAYING_QUEUE_TABLE_NAME);
-        onCreate(db);
-    }
-
-    public synchronized void saveQueues(@NonNull final ArrayList<Song> playingQueue, @NonNull final ArrayList<Song> originalPlayingQueue) {
-        saveQueue(PLAYING_QUEUE_TABLE_NAME, playingQueue);
-        saveQueue(ORIGINAL_PLAYING_QUEUE_TABLE_NAME, originalPlayingQueue);
+    @NonNull
+    private ArrayList<Song> getQueue(@NonNull final String tableName) {
+        Cursor cursor = getReadableDatabase().query(tableName, null,
+                null, null, null, null, null);
+        return SongLoader.INSTANCE.getSongs(cursor);
     }
 
     /**
@@ -173,6 +196,7 @@ public class MusicPlaybackQueueStore extends SQLiteOpenHelper {
                     values.put(AudioColumns.ALBUM, song.getAlbumName());
                     values.put(AudioColumns.ARTIST_ID, song.getArtistId());
                     values.put(AudioColumns.ARTIST, song.getArtistName());
+                    values.put(AudioColumns.COMPOSER, song.getComposer());
 
                     database.insert(tableName, null, values);
                 }
@@ -182,22 +206,5 @@ public class MusicPlaybackQueueStore extends SQLiteOpenHelper {
                 position += NUM_PROCESS;
             }
         }
-    }
-
-    @NonNull
-    public Observable<ArrayList<Song>> getSavedPlayingQueue() {
-        return getQueue(PLAYING_QUEUE_TABLE_NAME);
-    }
-
-    @NonNull
-    public Observable<ArrayList<Song>> getSavedOriginalPlayingQueue() {
-        return getQueue(ORIGINAL_PLAYING_QUEUE_TABLE_NAME);
-    }
-
-    @NonNull
-    private Observable<ArrayList<Song>> getQueue(@NonNull final String tableName) {
-        Cursor cursor = getReadableDatabase().query(tableName, null,
-                null, null, null, null, null);
-        return SongLoader.INSTANCE.getSongs(cursor);
     }
 }

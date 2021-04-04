@@ -1,3 +1,17 @@
+/*
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
+ */
+
 package code.name.monkey.retromusic.util;
 
 import android.content.Context;
@@ -5,6 +19,9 @@ import android.database.Cursor;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.webkit.MimeTypeMap;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -20,12 +37,9 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import code.name.monkey.retromusic.loaders.SongLoader;
 import code.name.monkey.retromusic.loaders.SortedCursor;
 import code.name.monkey.retromusic.model.Song;
-import io.reactivex.Observable;
 
 
 public final class FileUtil {
@@ -45,8 +59,8 @@ public final class FileUtil {
     }
 
     @NonNull
-    public static Observable<ArrayList<Song>> matchFilesWithMediaStore(@NonNull Context context,
-                                                                       @Nullable List<File> files) {
+    public static ArrayList<Song> matchFilesWithMediaStore(@NonNull Context context,
+                                                           @Nullable List<File> files) {
         return SongLoader.INSTANCE.getSongs(makeSongCursor(context, files));
     }
 
@@ -249,4 +263,6 @@ public final class FileUtil {
             return file.getAbsoluteFile();
         }
     }
+
+
 }

@@ -1,31 +1,27 @@
 /*
- * Copyright (C) 2012 Andrew Neal Licensed under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with the
- * License. You may obtain a copy of the License at
- * http://www.apache.org/licenses/LICENSE-2.0 Unless required by applicable law
- * or agreed to in writing, software distributed under the License is
- * distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
- * KIND, either express or implied. See the License for the specific language
- * governing permissions and limitations under the License.
+ * Copyright (c) 2019 Hemanth Savarala.
+ *
+ * Licensed under the GNU General Public License v3
+ *
+ * This is free software: you can redistribute it and/or modify it under
+ * the terms of the GNU General Public License as published by
+ *  the Free Software Foundation either version 3 of the License, or (at your option) any later version.
+ *
+ * This software is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+ * See the GNU General Public License for more details.
  */
 package code.name.monkey.retromusic.helper
 
 import android.provider.MediaStore
 
-/**
- * Holds all of the sort orders for each list type.
- *
- * @author Andrew Neal (andrewdneal@gmail.com)
- */
-/**
- * This class is never instantiated
- */
 class SortOrder {
 
     /**
      * Artist sort order entries.
      */
     interface ArtistSortOrder {
+
         companion object {
 
             /* Artist sort order A-Z */
@@ -46,6 +42,7 @@ class SortOrder {
      * Album sort order entries.
      */
     interface AlbumSortOrder {
+
         companion object {
 
             /* Album sort order A-Z */
@@ -70,6 +67,7 @@ class SortOrder {
      * Song sort order entries.
      */
     interface SongSortOrder {
+
         companion object {
 
             /* Song sort order A-Z */
@@ -92,6 +90,12 @@ class SortOrder {
 
             /* Song sort order date */
             const val SONG_DATE = MediaStore.Audio.Media.DATE_ADDED + " DESC"
+
+            /* Song sort modified date */
+            const val SONG_DATE_MODIFIED = MediaStore.Audio.Media.DATE_MODIFIED + " DESC"
+
+            /* Song sort order composer*/
+            const val COMPOSER = MediaStore.Audio.Media.COMPOSER
         }
     }
 
@@ -99,6 +103,7 @@ class SortOrder {
      * Album song sort order entries.
      */
     interface AlbumSongSortOrder {
+
         companion object {
 
             /* Album song sort order A-Z */
@@ -120,6 +125,7 @@ class SortOrder {
      * Artist song sort order entries.
      */
     interface ArtistSongSortOrder {
+
         companion object {
 
             /* Artist song sort order A-Z */
@@ -146,6 +152,7 @@ class SortOrder {
      * Artist album sort order entries.
      */
     interface ArtistAlbumSortOrder {
+
         companion object {
 
             /* Artist album sort order A-Z */
@@ -166,6 +173,7 @@ class SortOrder {
      * Genre sort order entries.
      */
     interface GenreSortOrder {
+
         companion object {
 
             /* Genre sort order A-Z */
@@ -175,5 +183,4 @@ class SortOrder {
             const val ALBUM_Z_A = "$GENRE_A_Z DESC"
         }
     }
-
 }
